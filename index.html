@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Jay's Word Vault Pro</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        /* Revolut-style Clean & Bold Design */
+        :root {
+            --bg: #F2F4F8;
+            --card-bg: #FFFFFF;
+            --text-main: #191C1F;
+            --text-sub: #8B959E;
+            --blue: #0075EB;
+            --accent: #FF00BF;
+            --green-bg: #E8F5E9; --green-text: #2E7D32;
+            --red-bg: #FFEBEE; --red-text: #C62828;
+            --purple-bg: #F3E5F5; --purple-text: #7B1FA2;
+        }
+        body {
+            margin: 0;
+            background-color: var(--bg);
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+        header {
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .brand { font-size: 20px; font-weight: 800; color: var(--text-main); letter-spacing: -0.5px; }
+        .counter {
+            font-size: 13px; font-weight: 700; color: white;
+            background: var(--text-main); padding: 6px 14px; border-radius: 20px;
+        }
+        .viewport {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            padding: 20px;
+        }
+        .card {
+            width: 100%;
+            height: 100%;
+            max-width: 380px;
+            max-height: 620px;
+            background: var(--card-bg);
+            border-radius: 28px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.08);
+            padding: 30px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            position: absolute;
+            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s;
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        .card::-webkit-scrollbar { display: none; }
+        /* Sentence Area with Audio */
+        .sentence-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .sentence {
+            font-size: 24px;
+            font-weight: 800;
+            line-height: 1.3;
+            color: var(--text-main);
+            letter-spacing: -0.8px;
+        }
+        .highlight {
+            color: var(--blue);
+            background: rgba(0, 117, 235, 0.08);
+            padding: 2px 6px; border-radius: 6px;
+        }
+        .audio-btn {
+            background: #F0F2F5;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            font-size: 20px;
+            color: var(--blue);
+            transition: 0.2s;
+        }
+        .audio-btn:active { transform: scale(0.9); background: #E1E4E8; }
+        /* Quiz Section */
+        .quiz-box { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+        .quiz-label { font-size: 12px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+       
+        .option {
+            padding: 18px;
+            border: 2px solid #F5F7FA;
+            border-radius: 18px;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-main);
+            background: white;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .option:active { transform: scale(0.98); }
+        .option.correct { border-color: var(--blue); background: #F0F7FF; color: var(--blue); }
+        .option.wrong { border-color: #FFCDD2; background: #FFEBEE; color: #C62828; }
+        /* Details Section */
+        .details {
+            display: none;
+            margin-top: 30px;
+            padding-top: 25px;
+            border-top: 2px dashed #EEE;
+            animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .tag-block { margin-bottom: 20px; }
+        .tag-title { font-size: 11px; font-weight: 800; color: var(--text-sub); margin-bottom: 8px; display: block; }
+        .tags { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tag { padding: 8px 12px; border-radius: 10px; font-size: 14px; font-weight: 600; }
+        .t-syn { background: var(--green-bg); color: var(--green-text); }
+        .t-ant { background: var(--red-bg); color: var(--red-text); }
+        .t-nuance { background: var(--purple-bg); color: var(--purple-text); width: 100%; line-height: 1.5; font-size: 15px; }
+        .next-hint {
+            position: absolute; bottom: 30px; width: 100%; text-align: center;
+            font-size: 14px; color: #BBB; font-weight: 600; opacity: 0; transition: 0.3s;
+            pointer-events: none;
+        }
+       
+        .empty-state { text-align: center; display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
+        .empty-emoji { font-size: 60px; margin-bottom: 20px; }
+        /* Loading Spinner 추가 */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            color: var(--blue);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="brand">Jay's Vault</div>
+        <div class="counter" id="progress">1 / ∞</div>
+    </header>
+    <div class="viewport" id="cardArea"><div class="loading">Loading cool word... 🚀</div></div>
+    <div class="next-hint" id="hint">Swipe Left ➡️</div>
+    <script>
+        // =================================================================
+        // 📚 Real-time Vocabulary Fetch (Improved Distractors)
+        // =================================================================
+        let idx = 0;
+        let usedWords = new Set();
+        const cardArea = document.getElementById('cardArea');
+        const progress = document.getElementById('progress');
+        const hint = document.getElementById('hint');
+        const maxWords = 2000;
+
+        async function fetchWord() {
+            let word;
+            do {
+                const length = Math.floor(Math.random() * 4) + 5;
+                const res = await fetch(`https://random-word-api.vercel.app/api?words=1&length=${length}`);
+                const data = await res.json();
+                word = data[0];
+            } while (usedWords.has(word) && usedWords.size < maxWords);
+
+            usedWords.add(word);
+
+            const dictRes = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+            const dictData = await dictRes.json();
+            if (dictData.title === "No Definitions Found") {
+                return fetchWord();
+            }
+
+            const entry = dictData[0];
+            const meanings = entry.meanings;
+            const primaryMeaning = meanings[0].definitions[0].definition;
+            let synonyms = meanings.flatMap(m => m.definitions.flatMap(d => d.synonyms || [])).slice(0, 3);
+            let antonyms = meanings.flatMap(m => m.definitions.flatMap(d => d.antonyms || [])).slice(0, 3);
+
+            if (synonyms.length === 0) synonyms = []; // 빈 경우 숨김
+            if (antonyms.length === 0) antonyms = [];
+
+            // Improved Distractors: ant 사용하거나 랜덤 단어 의미로
+            let distractors = [];
+            if (antonyms.length > 0) {
+                distractors.push(antonyms[0]);
+            }
+            if (meanings.length > 1) {
+                distractors.push(meanings[1].definitions[0].definition);
+            }
+            while (distractors.length < 2) {
+                const randomWord = await fetchRandomDistractor();
+                distractors.push(randomWord);
+            }
+
+            const options = [primaryMeaning, ...distractors];
+            const sentence = `The word **${word}** is cool like a bike trick!`; 
+            const nuance = `이 단어는 자전거 타면서 유튜브 영상 찍을 때처럼 재미있게 써봐! 예: "${word}" while riding!`;
+
+            return {
+                s: sentence,
+                t: word,
+                m: primaryMeaning,
+                o: options,
+                syn: synonyms,
+                ant: antonyms,
+                n: nuance
+            };
+        }
+
+        async function fetchRandomDistractor() {
+            const length = Math.floor(Math.random() * 4) + 5;
+            const res = await fetch(`https://random-word-api.vercel.app/api?words=1&length=${length}`);
+            const data = await res.json();
+            const distrWord = data[0];
+            const dictRes = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${distrWord}`);
+            const dictData = await dictRes.json();
+            if (dictData.title === "No Definitions Found") {
+                return "A different meaning"; // Fallback
+            }
+            return dictData[0].meanings[0].definitions[0].definition;
+        }
+
+        async function render() {
+            cardArea.innerHTML = '<div class="loading">Loading cool word... 🚀</div>';
+            if (idx >= maxWords) {
+                cardArea.innerHTML = `<div class='empty-state'><div class='empty-emoji'>🎉</div><h3>All Done (2000 words)!</h3><p style='color:#888'>Great job, Jay! Restart for more.</p></div>`;
+                hint.style.opacity = 0;
+                return;
+            }
+
+            const item = await fetchWord();
+
+            const sentenceHTML = item.s.replace(`**${item.t}**`, `<span class='highlight'>${item.t}</span>`);
+
+            let options = item.o.map(opt => ({ txt: opt, isCor: opt === item.m }));
+            options.sort(() => Math.random() - 0.5);
+
+            const el = document.createElement('div');
+            el.className = 'card';
+            el.innerHTML = `
+                <div class="sentence-row">
+                    <div class="sentence">${sentenceHTML}</div>
+                    <button class="audio-btn" onclick="speak('${item.s.replace(/'/g, "\\'")}')">🔊</button>
+                </div>
+               
+                <div class="quiz-box" id="quizBox">
+                    <div class="quiz-label">What does "${item.t}" mean?</div>
+                    ${options.map(o => `<div class="option" onclick="check(this, ${o.isCor})">${o.txt}</div>`).join('')}
+                </div>
+                <div class="details" id="details">
+                    <div class="tag-block">
+                        <span class="tag-title">JAY'S NOTE (NUANCE)</span>
+                        <div class="tag t-nuance">${item.n}</div>
+                    </div>
+                    ${item.syn.length > 0 ? `
+                    <div class="tag-block">
+                        <span class="tag-title">SYNONYMS</span>
+                        <div class="tags">
+                            ${item.syn.map(s => `<div class="tag t-syn">${s}</div>`).join('')}
+                        </div>
+                    </div>` : ''}
+                    ${item.ant.length > 0 ? `
+                    <div class="tag-block">
+                        <span class="tag-title">ANTONYMS</span>
+                        <div class="tags">
+                            ${item.ant.map(a => `<div class="tag t-ant">${a}</div>`).join('')}
+                        </div>
+                    </div>` : ''}
+                </div>
+            `;
+           
+            cardArea.innerHTML = '';
+            cardArea.appendChild(el);
+            progress.textContent = `${idx + 1} / ∞`;
+            hint.style.opacity = 0;
+        }
+        // 🔊 TTS Function
+        window.speak = (text) => {
+            const cleanText = text.replace(/\*\*/g, "");
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.9;
+            utterance.pitch = 1;
+            window.speechSynthesis.speak(utterance);
+        };
+        window.check = (btn, isCorrect) => {
+            const allBtns = document.querySelectorAll('.option');
+            allBtns.forEach(b => b.onclick = null);
+            if (isCorrect) {
+                btn.classList.add('correct');
+                showDetails();
+            } else {
+                btn.classList.add('wrong');
+                allBtns.forEach(b => {
+                    if (b.textContent === item.m) b.classList.add('correct'); // item.m으로 수정
+                });
+                showDetails();
+            }
+        };
+        function showDetails() {
+            const details = document.getElementById('details');
+            details.style.display = 'block';
+            setTimeout(() => {
+                const card = document.querySelector('.card');
+                card.scrollTo({ top: card.scrollHeight, behavior: 'smooth' });
+                hint.style.opacity = 1;
+            }, 100);
+        }
+        // Swipe Logic
+        let startX = 0;
+        let endX = 0;
+        document.addEventListener('touchstart', e => {
+            startX = e.changedTouches[0].screenX;
+        });
+        document.addEventListener('touchend', e => {
+            endX = e.changedTouches[0].screenX;
+            handleSwipe();
+        });
+        function handleSwipe() {
+            const details = document.getElementById('details');
+            if (!details || details.style.display === 'none') return;
+            if (startX - endX > 50) {
+                nextCard();
+            }
+        }
+        function nextCard() {
+            const card = document.querySelector('.card');
+            card.style.transform = 'translateX(-120%) rotate(-5deg)';
+            card.style.opacity = '0';
+            setTimeout(() => {
+                idx++;
+                render();
+            }, 300);
+        }
+        // Init
+        render();
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+</body>
+</html>
