@@ -214,7 +214,7 @@
 
             const options = [primaryMeaning, ...distractors];
             const sentence = `The word **${word}** is cool like a bike trick!`; 
-            const nuance = `이 단어는 자전거 타면서 유튜브 영상 찍을 때처럼 재미있게 써봐! 예: "${word}" while riding!`;
+            const nuance = `이 단어는 자전거 타면서 유튜브 영상 찍을 때처럼 재미있게 써봐! 예: "${word}" means ${primaryMeaning.slice(0, 20)}... while riding!`;
 
             return {
                 s: sentence,
@@ -265,7 +265,7 @@
                
                 <div class="quiz-box" id="quizBox">
                     <div class="quiz-label">What does "${currentItem.t}" mean?</div>
-                    ${options.map(o => `<div class="option" onclick="check(this, ${o.isCor}, '${o.txt}')">${o.txt}</div>`).join('')}
+                    ${options.map(o => `<div class="option" onclick="check(this, ${o.isCor})">${o.txt}</div>`).join('')}
                 </div>
                 <div class="details" id="details">
                     <div class="tag-block">
@@ -304,7 +304,7 @@
             utterance.pitch = 1;
             window.speechSynthesis.speak(utterance);
         };
-        window.check = (btn, isCorrect, selectedText) => {
+        window.check = (btn, isCorrect) => {
             const allBtns = document.querySelectorAll('.option');
             allBtns.forEach(b => b.onclick = null);
             if (isCorrect) {
