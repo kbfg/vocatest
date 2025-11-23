@@ -171,6 +171,7 @@
         const progress = document.getElementById('progress');
         const hint = document.getElementById('hint');
         const maxWords = 2000;
+        let currentItem; // 글로벌로 item 저장 (check에서 참조)
 
         async function fetchWord() {
             let word;
@@ -195,10 +196,10 @@
             let synonyms = meanings.flatMap(m => m.definitions.flatMap(d => d.synonyms || [])).slice(0, 3);
             let antonyms = meanings.flatMap(m => m.definitions.flatMap(d => d.antonyms || [])).slice(0, 3);
 
-            if (synonyms.length === 0) synonyms = []; // 빈 경우 숨김
+            if (synonyms.length === 0) synonyms = []; 
             if (antonyms.length === 0) antonyms = [];
 
-            // Improved Distractors: ant 사용하거나 랜덤 단어 의미로
+            // Improved Distractors
             let distractors = [];
             if (antonyms.length > 0) {
                 distractors.push(antonyms[0]);
@@ -234,7 +235,7 @@
             const dictRes = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${distrWord}`);
             const dictData = await dictRes.json();
             if (dictData.title === "No Definitions Found") {
-                return "A different meaning"; // Fallback
+                return "A different meaning"; 
             }
             return dictData[0].meanings[0].definitions[0].definition;
         }
@@ -247,11 +248,11 @@
                 return;
             }
 
-            const item = await fetchWord();
+            currentItem = await fetchWord(); // 글로벌 저장
 
-            const sentenceHTML = item.s.replace(`**${item.t}**`, `<span class='highlight'>${item.t}</span>`);
+            const sentenceHTML = currentItem.s.replace(`**${currentItem.t}**`, `<span class='highlight'>${currentItem.t}</span>`);
 
-            let options = item.o.map(opt => ({ txt: opt, isCor: opt === item.m }));
+            let options = currentItem.o.map(opt => ({ txt: opt, isCor: opt === currentItem.m }));
             options.sort(() => Math.random() - 0.5);
 
             const el = document.createElement('div');
@@ -259,30 +260,30 @@
             el.innerHTML = `
                 <div class="sentence-row">
                     <div class="sentence">${sentenceHTML}</div>
-                    <button class="audio-btn" onclick="speak('${item.s.replace(/'/g, "\\'")}')">🔊</button>
+                    <button class="audio-btn" onclick="speak('${currentItem.s.replace(/'/g, "\\'")}')">🔊</button>
                 </div>
                
                 <div class="quiz-box" id="quizBox">
-                    <div class="quiz-label">What does "${item.t}" mean?</div>
-                    ${options.map(o => `<div class="option" onclick="check(this, ${o.isCor})">${o.txt}</div>`).join('')}
+                    <div class="quiz-label">What does "${currentItem.t}" mean?</div>
+                    ${options.map(o => `<div class="option" onclick="check(this, ${o.isCor}, '${o.txt}')">${o.txt}</div>`).join('')}
                 </div>
                 <div class="details" id="details">
                     <div class="tag-block">
                         <span class="tag-title">JAY'S NOTE (NUANCE)</span>
-                        <div class="tag t-nuance">${item.n}</div>
+                        <div class="tag t-nuance">${currentItem.n}</div>
                     </div>
-                    ${item.syn.length > 0 ? `
+                    ${currentItem.syn.length > 0 ? `
                     <div class="tag-block">
                         <span class="tag-title">SYNONYMS</span>
                         <div class="tags">
-                            ${item.syn.map(s => `<div class="tag t-syn">${s}</div>`).join('')}
+                            ${currentItem.syn.map(s => `<div class="tag t-syn">${s}</div>`).join('')}
                         </div>
                     </div>` : ''}
-                    ${item.ant.length > 0 ? `
+                    ${currentItem.ant.length > 0 ? `
                     <div class="tag-block">
                         <span class="tag-title">ANTONYMS</span>
                         <div class="tags">
-                            ${item.ant.map(a => `<div class="tag t-ant">${a}</div>`).join('')}
+                            ${currentItem.ant.map(a => `<div class="tag t-ant">${a}</div>`).join('')}
                         </div>
                     </div>` : ''}
                 </div>
@@ -303,7 +304,7 @@
             utterance.pitch = 1;
             window.speechSynthesis.speak(utterance);
         };
-        window.check = (btn, isCorrect) => {
+        window.check = (btn, isCorrect, selectedText) => {
             const allBtns = document.querySelectorAll('.option');
             allBtns.forEach(b => b.onclick = null);
             if (isCorrect) {
@@ -312,7 +313,7 @@
             } else {
                 btn.classList.add('wrong');
                 allBtns.forEach(b => {
-                    if (b.textContent === item.m) b.classList.add('correct'); // item.m으로 수정
+                    if (b.textContent === currentItem.m) b.classList.add('correct');
                 });
                 showDetails();
             }
